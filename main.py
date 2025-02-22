@@ -1,28 +1,50 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes.auth import router as auth_router
-import os
-from dotenv import load_dotenv
+from fastapi.staticfiles import StaticFiles
+from app.core.config import settings
+from app.api.v1.api import api_router
+from app.api.errors.http_error import http_error_handler
+from starlette.exceptions import HTTPException
+from app.middleware.logging import logging_middleware
+from app.monitoring.prometheus import metrics_middleware
+from app.middleware.version import version_middleware
+import uvicorn
 
-load_dotenv()
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    version=settings.VERSION,
+    docs_url=f"{settings.API_V1_STR}/docs",
+    redoc_url=f"{settings.API_V1_STR}/redoc",
+    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+)
 
-app = FastAPI()
+# Middleware
+app.middleware("http")(logging_middleware)
+app.middleware("http")(metrics_middleware)
+app.middleware("http")(version_middleware)
 
-@app.get("/")
-async def root():
-    return {"message": "Welcome to DataViv API"}
+# Exception handlers
+app.add_exception_handler(HTTPException, http_error_handler)
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(auth_router, prefix="/auth", tags=["auth"])
+# Static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# API routes
+app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Health check
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "version": settings.VERSION}
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)

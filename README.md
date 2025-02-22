@@ -1,209 +1,309 @@
-# DataViv Backend - User Authentication API
+# 🚀 DataViv Backend - Complete FastAPI Reference
 
-## ✅ Requirements Checklist
+## Table of Contents
+- [Introduction](#introduction)
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Detailed Setup](#detailed-setup)
+- [API Documentation](#api-documentation)
+- [Development Guide](#development-guide)
+- [Deployment Options](#deployment-options)
+- [Testing](#testing)
+- [Troubleshooting](#troubleshooting)
 
-### Authentication Features
-- [x] User Registration
-- [x] User Login
-- [x] JWT Access Token
-- [x] JWT Refresh Token
-- [x] HTTP Cookie Storage
+## Introduction
 
-### API Endpoints
-- [x] User Registration (/auth/register)
-- [x] User Login (/auth/login)
-- [x] User Details (/auth/user/me)
+A production-ready FastAPI backend template with authentication, database integration, and cloud deployment support.
 
-### Database
-- [x] PostgreSQL Implementation
-- [x] SQLAlchemy ORM
-- [x] Persistent Data Storage
+### Tech Stack
+- **FastAPI**: Modern web framework
+- **PostgreSQL**: Primary database
+- **Redis**: Caching and rate limiting
+- **SQLAlchemy**: ORM
+- **Alembic**: Database migrations
+- **JWT**: Authentication
+- **Docker**: Containerization
+- **Kubernetes**: Orchestration
 
-### Environment Configuration
-- [x] Access Token (1 minute expiry)
-- [x] Refresh Token (1 week expiry)
-- [x] Environment Variables
-- [x] Port 8001 Configuration
+## Features
 
-### Deployment
-- [x] Docker Container
-- [x] Kubernetes Setup (3 backend pods)
-- [x] Database Service
-- [x] Private Network
-- [x] Nginx Frontend
-- [x] Load Balancing (Ingress)
+### 🔐 Authentication & Security
+- JWT token authentication
+- Refresh token mechanism
+- Password hashing with bcrypt
+- Rate limiting
+- HTTP-only cookies
+- Role-based access control (Admin/User/Moderator)
+- Email verification
 
-## 🚀 Quick Start
+### 💾 Data Management
+- PostgreSQL integration
+- Redis caching
+- File uploads to S3
+- Background tasks
+- Database migrations
 
-### Local Development Setup
+### 🔍 Monitoring & Logging
+- Prometheus metrics
+- Health checks
+- Request logging
+- Error tracking
 
-1. Create and activate virtual environment:
+### 🚀 DevOps Ready
+- Docker support
+- Kubernetes configurations
+- Nginx reverse proxy
+- Load balancing
+- SSL/TLS support
+
+## Quick Start
+
+### 1. Clone and Setup
 ```bash
+# Clone repository
+git clone <repository-url>
+cd dataviv_backend
+
+# Create virtual environment
 python -m venv venv
+source venv/bin/activate  # or `venv\Scripts\activate` on Windows
 
-# Windows
-venv\Scripts\activate
-
-# Unix/MacOS
-source venv/bin/activate
-```
-
-2. Install dependencies:
-```bash
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-3. Configure environment variables (.env):
+### 2. Configure Environment
+Create `.env` file:
 ```env
-DATABASE_URL=postgresql://user:password@host:5432/dbname
-SECRET_KEY=your_secret_key
+# Required Settings
+DATABASE_URL=postgresql://user:password@localhost:5432/dbname
+SECRET_KEY=your-secret-key
 ACCESS_TOKEN_EXPIRE_MINUTES=1
 REFRESH_TOKEN_EXPIRE_DAYS=7
+
+# Optional Features
+REDIS_URL=redis://localhost:6379
+AWS_ACCESS_KEY_ID=your_key
+AWS_SECRET_ACCESS_KEY=your_secret
+AWS_BUCKET_NAME=your_bucket
+
+# Email Settings
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your@email.com
+SMTP_PASSWORD=app_password
 ```
 
-4. Run the server:
+### 3. Run Application
 ```bash
-# Development with reload
+# Development
 uvicorn main:app --reload --port 8001
 
 # Production
-python main.py
+uvicorn main:app --host 0.0.0.0 --port 8001
 ```
 
-### 🐳 Docker Deployment
+## API Documentation
 
-1. Build image:
+### Authentication Endpoints
+
+#### Register User
 ```bash
-docker build -t dataviv-backend:latest .
+POST /api/v1/auth/register
+{
+    "username": "user123",
+    "email": "user@example.com",
+    "password": "securepass123"
+}
 ```
 
-2. Run with Docker Compose:
+#### Login
 ```bash
-docker-compose up -d
+POST /api/v1/auth/login
+{
+    "username": "user123",
+    "password": "securepass123"
+}
 ```
 
-### ☸️ Kubernetes Deployment
-
-1. Start Minikube:
+#### Profile Management
 ```bash
-minikube start
+# Get profile
+GET /api/v1/profiles/me
+
+# Update profile
+PUT /api/v1/profiles/me
+{
+    "full_name": "John Doe",
+    "bio": "Software Developer"
+}
+
+# Upload avatar
+POST /api/v1/profiles/avatar
+Content-Type: multipart/form-data
 ```
 
-2. Configure Docker environment:
-```powershell
-# Windows PowerShell
-& minikube -p minikube docker-env | Invoke-Expression
+## Development Guide
 
-# Unix/Linux/MacOS
-eval $(minikube docker-env)
-```
-
-3. Build image in Minikube context:
-```bash
-docker build -t dataviv-backend:latest .
-```
-
-4. Deploy to Kubernetes:
-```bash
-kubectl apply -f k8s/
-```
-
-5. Verify deployment:
-```bash
-kubectl get pods
-kubectl get services
-kubectl get ingress
-```
-
-## 🔌 API Endpoints
-
-### Base URL: `http://localhost:8001`
-
-1. Root Endpoint
-   - URL: `/`
-   - Method: `GET`
-   - Response: Welcome message
-
-2. Auth Status
-   - URL: `/auth/`
-   - Method: `GET`
-   - Response: Server and database status
-
-3. Register User
-   - URL: `/auth/register`
-   - Method: `POST`
-   - Body:
-     ```json
-     {
-       "username": "user123",
-       "email": "user@example.com",
-       "password": "securepass"
-     }
-     ```
-
-4. User Login
-   - URL: `/auth/login`
-   - Method: `POST`
-   - Body:
-     ```json
-     {
-       "username": "user123",
-       "password": "securepass"
-     }
-     ```
-   - Returns: Access and refresh tokens
-
-5. User Details
-   - URL: `/auth/user/me`
-   - Method: `GET`
-   - Header: `Authorization: Bearer <access_token>`
-
-## 📚 Documentation
-
-- Swagger UI: `http://localhost:8001/docs`
-- ReDoc: `http://localhost:8001/redoc`
-
-## 🏗️ Project Structure
+### Project Structure
 ```
 dataviv_backend/
 ├── app/
-│   ├── models/
-│   │   └── user.py
-│   ├── routes/
-│   │   └── auth.py
-│   ├── utils/
-│   │   └── auth.py
-│   └── database.py
-├── k8s/
-│   ├── backend-deployment.yaml
-│   ├── database-deployment.yaml
-│   ├── ingress.yaml
-│   ├── nginx-config.yaml
-│   ├── nginx-deployment.yaml
-│   └── postgres-pvc.yaml
-├── .env
-├── main.py
-├── Dockerfile
-└── requirements.txt
+│   ├── api/
+│   │   ├── v1/
+│   │   │   ├── endpoints/     # API routes
+│   │   │   └── api.py        # Router registration
+│   │   └── deps.py          # Dependencies
+│   ├── core/
+│   │   ├── config.py        # Settings
+│   │   └── security.py      # Security utils
+│   ├── models/              # Database models
+│   ├── schemas/             # Pydantic schemas
+│   ├── services/            # Business logic
+│   └── tests/               # Test files
+├── migrations/              # Alembic migrations
+└── k8s/                    # Kubernetes configs
 ```
 
-## 🔒 Security Features
-- JWT Token Authentication
-- HTTP-only Cookies
-- Encrypted Password Storage
-- Private Network Services
-- SSL/TLS Support
+### Database Migrations
+```bash
+# Create migration
+alembic revision --autogenerate -m "description"
 
-## ⚙️ Configuration
+# Apply migration
+alembic upgrade head
 
-### Environment Variables
-- `DATABASE_URL`: PostgreSQL connection string
-- `SECRET_KEY`: JWT signing key
-- `ACCESS_TOKEN_EXPIRE_MINUTES`: Access token validity (default: 1)
-- `REFRESH_TOKEN_EXPIRE_DAYS`: Refresh token validity (default: 7)
+# Rollback
+alembic downgrade -1
+```
 
-### Kubernetes Services
-- Backend: 3 replicas for high availability
-- Database: Persistent volume with PostgreSQL
-- Nginx: Load balancer and reverse proxy
-- Ingress: External access management
+### Running Tests
+```bash
+# All tests
+pytest
+
+# With coverage
+pytest --cov=app --cov-report=html
+
+# Single test file
+pytest app/tests/test_auth.py -v
+```
+
+## Deployment Options
+
+### Docker Deployment
+```bash
+# Build and run
+docker-compose up --build
+
+# Production mode
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### Kubernetes Deployment
+```bash
+# Start Minikube
+minikube start
+
+# Deploy application
+kubectl apply -f k8s/
+
+# Verify deployment
+kubectl get pods
+kubectl get services
+```
+
+## Advanced Features
+
+### Redis Caching
+```python
+from app.cache.redis_cache import cached
+
+@router.get("/items")
+@cached(ttl=300)  # Cache for 5 minutes
+async def get_items():
+    return items
+```
+
+### Background Tasks
+```python
+from app.tasks.worker import process_uploaded_file
+
+@router.post("/upload")
+async def upload(background_tasks: BackgroundTasks):
+    background_tasks.add_task(process_uploaded_file)
+```
+
+### Custom Middleware
+```python
+from app.middleware.logging import logging_middleware
+app.middleware("http")(logging_middleware)
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. Database Connection
+```bash
+# Verify PostgreSQL
+psql -h localhost -U postgres -d auth_db
+
+# Check migrations
+alembic current
+alembic history
+```
+
+2. Authentication Issues
+```bash
+# Clear tokens
+redis-cli
+> FLUSHALL
+
+# Check JWT
+python -c "import jwt; print(jwt.decode(token, verify=False))"
+```
+
+3. Kubernetes Issues
+```bash
+# Check pods
+kubectl describe pod <pod-name>
+
+# View logs
+kubectl logs <pod-name>
+
+# Port forward
+kubectl port-forward service/backend 8001:8001
+```
+
+## Security Best Practices
+
+1. Environment Variables
+- Never commit .env files
+- Use strong SECRET_KEY
+- Rotate credentials regularly
+
+2. API Security
+- Rate limiting enabled
+- CORS properly configured
+- Input validation with Pydantic
+- SQL injection prevention
+
+3. Password Security
+- Bcrypt hashing
+- Password strength validation
+- Secure token storage
+
+## Contributing
+
+1. Fork the repository
+2. Create feature branch
+3. Commit changes
+4. Create pull request
+
+## Support
+
+Need help? Check out:
+- [Documentation](https://fastapi.tiangolo.com/)
+- [Issue Tracker](https://github.com/your-repo/issues)
+- [Discord Community](https://discord.gg/your-channel)

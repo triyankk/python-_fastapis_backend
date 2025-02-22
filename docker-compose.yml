@@ -8,8 +8,11 @@ services:
       - .:/app
     ports:
       - "8001:8001"
+    env_file:
+      - .env
     depends_on:
       - db
+      - redis
     environment:
       - DATABASE_URL=postgresql://postgres:password@db:5432/auth_db
 
@@ -24,5 +27,13 @@ services:
     ports:
       - "5432:5432"
 
+  redis:
+    image: redis:6
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
 volumes:
   postgres_data:
+  redis_data:

@@ -9,6 +9,7 @@ from fastapi.security import OAuth2PasswordBearer  # Change back to OAuth2Passwo
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from ..database import get_db
+from ..docs.descriptions import DESCRIPTIONS
 
 load_dotenv()
 router = APIRouter()
@@ -39,8 +40,13 @@ async def root(db: Session = Depends(get_db)):
             "error": str(e)
         }
 
-@router.post("/register")
-async def register(user: UserCreate, db: Session = Depends(get_db)):
+@router.post("/register", 
+    response_model=UserResponse,
+    **DESCRIPTIONS["auth_register"])
+async def register(
+    user: UserCreate,
+    db: Session = Depends(get_db)
+):
     db_user = db.query(User).filter(User.username == user.username).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
@@ -54,8 +60,14 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
     
     return {"message": "User created successfully"}
 
-@router.post("/login")
-async def login(user: UserLogin, response: Response, db: Session = Depends(get_db)):
+@router.post("/login",
+    response_model=Token,
+    **DESCRIPTIONS["auth_login"])
+async def login(
+    user: UserLogin,
+    response: Response,
+    db: Session = Depends(get_db)
+):
     db_user = db.query(User).filter(User.username == user.username).first()
     if not db_user or not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -75,8 +87,13 @@ async def login(user: UserLogin, response: Response, db: Session = Depends(get_d
     
     return {"access_token": access_token, "refresh_token": refresh_token}
 
-@router.get("/user/me")
-async def get_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+@router.get("/user/me",
+    response_model=UserResponse,
+    **DESCRIPTIONS["user_me"])
+async def get_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
     payload = verify_token(token)
     user = db.query(User).filter(User.username == payload.get("sub")).first()
     if not user:
