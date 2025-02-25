@@ -2,9 +2,10 @@ from datetime import datetime, timedelta
 from typing import Optional
 import jwt
 from passlib.context import CryptContext
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 import os
 from dotenv import load_dotenv
+from app.models.user import User  # Assuming this exists
 
 load_dotenv()
 
@@ -33,3 +34,8 @@ def verify_token(token: str):
         return payload
     except:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+async def get_current_user(request: Request) -> User:
+    # Implement your logic to extract user from request (e.g., from token)
+    # This is just a placeholder implementation
+    return User(id=1, username="testuser")  # Replace with actual logic
