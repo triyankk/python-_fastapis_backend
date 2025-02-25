@@ -6,8 +6,9 @@ class Notification(Base):
     __tablename__ = "notifications"
 
     id = Column(Integer, primary_key=True, index=True)
-    endpoint = Column(String(255))
+    timestamp = Column(DateTime, default=datetime.utcnow)
     method = Column(String(10))
+    path = Column(String(255))
     request_body = Column(Text, nullable=True)
     response_body = Column(Text, nullable=True)
     status_code = Column(Integer, nullable=True)
@@ -15,4 +16,3 @@ class Notification(Base):
     headers = Column(Text, nullable=True)
     client_host = Column(String(255), nullable=True)
     query_params = Column(Text, nullable=True)
-    timestamp = Column(DateTime, default=datetime.utcnow)

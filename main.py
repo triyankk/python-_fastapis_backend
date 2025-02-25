@@ -6,6 +6,7 @@ from app.routes.auth import router as auth_router
 from app.utils.auth import get_current_user  # Assuming this exists
 import os
 from dotenv import load_dotenv
+from starlette.responses import Response
 
 load_dotenv()
 
@@ -46,7 +47,7 @@ async def api_tracking_middleware(request: Request, call_next):
 
     # Call the next middleware or endpoint
     response = await call_next(request)
-
+    
     # Get response details
     response_body = b""
     async for chunk in response.body_iterator:
@@ -61,13 +62,18 @@ async def api_tracking_middleware(request: Request, call_next):
         request_body=request_body.decode() if request_body else None,
         response_body=response_body.decode() if response_body else None,
         status_code=response.status_code,
-        headers=str(headers),
+        headers=headers,
         client_host=client_host,
-        query_params=str(query_params)
+        query_params=query_params
     )
 
     # Reconstruct response
-    return response
+    return Response(
+        content=response_body,
+        status_code=response.status_code,
+        headers=dict(response.headers),
+        media_type=response.media_type
+    )
 
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 

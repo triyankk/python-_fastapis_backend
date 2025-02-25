@@ -3,6 +3,7 @@ from sqlalchemy.orm import sessionmaker
 from app.db.base_class import Base
 import os
 from dotenv import load_dotenv
+import json
 
 load_dotenv()
 
@@ -36,23 +37,23 @@ def get_db():
         db.close()
 
 # Function to log API calls
-def insert_notification(db, method: str, path: str, user_id: int = None, request_body: str = None, response_body: str = None, status_code: int = None, headers: str = None, client_host: str = None, query_params: str = None):
+def insert_notification(db, method: str, path: str, user_id: int = None, request_body: str = None, response_body: str = None, status_code: int = None, headers: dict = None, client_host: str = None, query_params: dict = None):
     """Logs API call details into the notifications table."""
     try:
         query = text("""
-            INSERT INTO notifications (method, endpoint, user_id, request_body, response_body, status_code, headers, client_host, query_params, timestamp) 
-            VALUES (:method, :endpoint, :user_id, :request_body, :response_body, :status_code, :headers, :client_host, :query_params, NOW())
+            INSERT INTO notifications (method, path, user_id, request_body, response_body, status_code, headers, client_host, query_params, timestamp) 
+            VALUES (:method, :path, :user_id, :request_body, :response_body, :status_code, :headers, :client_host, :query_params, NOW())
         """)
         db.execute(query, {
             "method": method,
-            "endpoint": path,
+            "path": path,
             "user_id": user_id,
             "request_body": request_body,
             "response_body": response_body,
             "status_code": status_code,
-            "headers": headers,
+            "headers": json.dumps(headers) if headers else None,
             "client_host": client_host,
-            "query_params": query_params
+            "query_params": json.dumps(query_params) if query_params else None
         })
         db.commit()
     except Exception as e:

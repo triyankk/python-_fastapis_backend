@@ -74,3 +74,6 @@ site/
 
 # Local development
 local_settings.py
+
+/tmp
+appmap.yml
