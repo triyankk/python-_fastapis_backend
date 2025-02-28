@@ -1,209 +1,263 @@
-# DataViv Backend - User Authentication API
+# DataViv Backend - Python FastAPI Service
 
-## ✅ Requirements Checklist
+## Overview
+DataViv Backend is a Python FastAPI service that provides:
+- Real-time API request tracking
+- WebSocket notifications
+- Database integration with PostgreSQL
+- Comprehensive error handling
 
-### Authentication Features
-- [x] User Registration
-- [x] User Login
-- [x] JWT Access Token
-- [x] JWT Refresh Token
-- [x] HTTP Cookie Storage
+## Quick Start
 
-### API Endpoints
-- [x] User Registration (/auth/register)
-- [x] User Login (/auth/login)
-- [x] User Details (/auth/user/me)
-
-### Database
-- [x] PostgreSQL Implementation
-- [x] SQLAlchemy ORM
-- [x] Persistent Data Storage
-
-### Environment Configuration
-- [x] Access Token (1 minute expiry)
-- [x] Refresh Token (1 week expiry)
-- [x] Environment Variables
-- [x] Port 8001 Configuration
-
-### Deployment
-- [x] Docker Container
-- [x] Kubernetes Setup (3 backend pods)
-- [x] Database Service
-- [x] Private Network
-- [x] Nginx Frontend
-- [x] Load Balancing (Ingress)
-
-## 🚀 Quick Start
-
-### Local Development Setup
-
-1. Create and activate virtual environment:
+### 1. Setup Python Environment
 ```bash
+# Create virtual environment
 python -m venv venv
 
+# Activate virtual environment
 # Windows
 venv\Scripts\activate
-
 # Unix/MacOS
 source venv/bin/activate
-```
 
-2. Install dependencies:
-```bash
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-3. Configure environment variables (.env):
+### 2. Configure Environment
+Create `.env` file:
 ```env
-DATABASE_URL=postgresql://user:password@host:5432/dbname
-SECRET_KEY=your_secret_key
-ACCESS_TOKEN_EXPIRE_MINUTES=1
-REFRESH_TOKEN_EXPIRE_DAYS=7
+DATABASE_URL=postgresql://user:password@localhost:5432/dataviv
 ```
 
-4. Run the server:
+### 3. Run the Application
 ```bash
-# Development with reload
-uvicorn main:app --reload --port 8001
-
-# Production
-python main.py
+uvicorn main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
-### 🐳 Docker Deployment
+## Project Structure
+```
+app/
+├── models/              # SQLAlchemy models
+│   ├── notification.py
+│   └── user.py
+├── routes/             # API routes
+│   ├── notification.py
+│   └── auth.py
+├── services/          # Business logic
+│   └── notification_service.py
+├── utils/            # Utility functions
+│   └── error_handler.py
+└── database.py       # Database configuration
+```
 
-1. Build image:
+## Core Features
+
+### 1. Notification System
+```python
+# Create notification
+POST /notifications
+{
+    "method": "GET",
+    "path": "/example",
+    "status_code": 200
+}
+
+# Get notifications
+GET /notifications?skip=0&limit=10
+```
+
+### 2. WebSocket Integration
+```python
+import websockets
+import asyncio
+
+async def connect_to_notifications():
+    uri = "ws://localhost:8001/ws/notifications"
+    async with websockets.connect(uri) as websocket:
+        while True:
+            notification = await websocket.recv()
+            print(f"Received: {notification}")
+
+# Run WebSocket client
+asyncio.run(connect_to_notifications())
+```
+
+### 3. Error Handling
+```python
+# Using custom exceptions
+try:
+    result = some_operation()
+except Exception as e:
+    raise APIError(
+        status_code=500,
+        detail="Operation failed",
+        error_type="operation_error"
+    )
+
+# Error response format
+{
+    "error": "error_type",
+    "detail": "Error description",
+    "status_code": 500
+}
+```
+
+## API Reference
+
+### Notifications API
+
+```python
+# Create notification
+@router.post("/notifications/")
+async def create_notification(...)
+
+# Get notification by ID
+@router.get("/notifications/{notification_id}")
+async def read_notification(...)
+
+# List notifications
+@router.get("/notifications/")
+async def read_notifications(...)
+
+# Update notification
+@router.put("/notifications/{notification_id}")
+async def update_notification(...)
+
+# Delete notification
+@router.delete("/notifications/{notification_id}")
+async def delete_notification(...)
+```
+
+### WebSocket API
+```python
+@app.websocket("/ws/notifications")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            data = await websocket.receive_text()
+    except WebSocketDisconnect:
+        # Handle disconnect
+```
+
+## Error Handling
+
+### Custom Exceptions
+```python
+class APIError(HTTPException):
+    def __init__(self, status_code: int, detail: str, error_type: str):
+        super().__init__(status_code=status_code, detail=detail)
+        self.error_type = error_type
+
+class DatabaseError(Exception):
+    def __init__(self, message: str, original_error: Exception = None):
+        super().__init__(message)
+        self.original_error = original_error
+```
+
+### Error Logging
+```python
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Log errors
+try:
+    # Your code
+except Exception as e:
+    logger.error(f"Error occurred: {str(e)}", exc_info=True)
+```
+
+## Database Operations
+
+### Models
+```python
+class Notification(Base):
+    __tablename__ = "notifications"
+    id = Column(Integer, primary_key=True)
+    method = Column(String)
+    path = Column(String)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+```
+
+### Queries
+```python
+# Create
+db.add(notification)
+db.commit()
+
+# Read
+db.query(Notification).filter(Notification.id == notification_id).first()
+
+# Update
+notification.update(data)
+db.commit()
+
+# Delete
+db.delete(notification)
+db.commit()
+```
+
+## Development Guide
+
+### Adding New Features
+1. Create model in `app/models/`
+2. Create schema in `app/schemas/`
+3. Add routes in `app/routes/`
+4. Include error handling
+5. Add logging statements
+
+### Testing
 ```bash
-docker build -t dataviv-backend:latest .
+# Run tests
+pytest
+
+# Run specific test
+pytest tests/test_notifications.py -v
 ```
 
-2. Run with Docker Compose:
-```bash
-docker-compose up -d
+### Debugging Tips
+1. Enable debug logging
+2. Use FastAPI debug mode
+3. Check database logs
+4. Monitor WebSocket connections
+
+## Common Issues
+
+### Database Connection
+```python
+# Check connection
+from sqlalchemy import create_engine
+engine = create_engine(DATABASE_URL)
+try:
+    connection = engine.connect()
+    # Connection successful
+except Exception as e:
+    print(f"Connection failed: {e}")
 ```
 
-### ☸️ Kubernetes Deployment
-
-1. Start Minikube:
-```bash
-minikube start
+### WebSocket Errors
+```python
+# Handle WebSocket disconnects
+try:
+    await websocket.send_text(message)
+except WebSocketDisconnect:
+    websocket_clients.remove(websocket)
+except Exception as e:
+    logger.error(f"WebSocket error: {e}")
 ```
 
-2. Configure Docker environment:
-```powershell
-# Windows PowerShell
-& minikube -p minikube docker-env | Invoke-Expression
-
-# Unix/Linux/MacOS
-eval $(minikube docker-env)
+### API Errors
+```python
+# Handle API errors
+@app.exception_handler(APIError)
+async def api_error_handler(request, exc):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": exc.error_type, "detail": exc.detail}
+    )
 ```
-
-3. Build image in Minikube context:
-```bash
-docker build -t dataviv-backend:latest .
-```
-
-4. Deploy to Kubernetes:
-```bash
-kubectl apply -f k8s/
-```
-
-5. Verify deployment:
-```bash
-kubectl get pods
-kubectl get services
-kubectl get ingress
-```
-
-## 🔌 API Endpoints
-
-### Base URL: `http://localhost:8001`
-
-1. Root Endpoint
-   - URL: `/`
-   - Method: `GET`
-   - Response: Welcome message
-
-2. Auth Status
-   - URL: `/auth/`
-   - Method: `GET`
-   - Response: Server and database status
-
-3. Register User
-   - URL: `/auth/register`
-   - Method: `POST`
-   - Body:
-     ```json
-     {
-       "username": "user123",
-       "email": "user@example.com",
-       "password": "securepass"
-     }
-     ```
-
-4. User Login
-   - URL: `/auth/login`
-   - Method: `POST`
-   - Body:
-     ```json
-     {
-       "username": "user123",
-       "password": "securepass"
-     }
-     ```
-   - Returns: Access and refresh tokens
-
-5. User Details
-   - URL: `/auth/user/me`
-   - Method: `GET`
-   - Header: `Authorization: Bearer <access_token>`
-
-## 📚 Documentation
-
-- Swagger UI: `http://localhost:8001/docs`
-- ReDoc: `http://localhost:8001/redoc`
-
-## 🏗️ Project Structure
-```
-dataviv_backend/
-├── app/
-│   ├── models/
-│   │   └── user.py
-│   ├── routes/
-│   │   └── auth.py
-│   ├── utils/
-│   │   └── auth.py
-│   └── database.py
-├── k8s/
-│   ├── backend-deployment.yaml
-│   ├── database-deployment.yaml
-│   ├── ingress.yaml
-│   ├── nginx-config.yaml
-│   ├── nginx-deployment.yaml
-│   └── postgres-pvc.yaml
-├── .env
-├── main.py
-├── Dockerfile
-└── requirements.txt
-```
-
-## 🔒 Security Features
-- JWT Token Authentication
-- HTTP-only Cookies
-- Encrypted Password Storage
-- Private Network Services
-- SSL/TLS Support
-
-## ⚙️ Configuration
-
-### Environment Variables
-- `DATABASE_URL`: PostgreSQL connection string
-- `SECRET_KEY`: JWT signing key
-- `ACCESS_TOKEN_EXPIRE_MINUTES`: Access token validity (default: 1)
-- `REFRESH_TOKEN_EXPIRE_DAYS`: Refresh token validity (default: 7)
-
-### Kubernetes Services
-- Backend: 3 replicas for high availability
-- Database: Persistent volume with PostgreSQL
-- Nginx: Load balancer and reverse proxy
-- Ingress: External access management
