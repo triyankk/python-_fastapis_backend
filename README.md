@@ -1,15 +1,23 @@
 # DataViv Backend - Python FastAPI Service
 
-## Overview
-DataViv Backend is a Python FastAPI service that provides:
-- Real-time API request tracking
-- WebSocket notifications
-- Database integration with PostgreSQL
-- Comprehensive error handling
-
 ## Quick Start
 
-### 1. Setup Python Environment
+### 1. Package Requirements
+```bash
+# Core packages
+fastapi==0.104.1
+uvicorn==0.24.0
+sqlalchemy==2.0.23
+passlib==1.7.4
+bcrypt==4.0.1
+python-jose==3.3.0
+python-multipart==0.0.6
+python-dotenv==1.0.0
+websockets==12.0
+psycopg2-binary==2.9.9
+```
+
+### 2. Installation
 ```bash
 # Create virtual environment
 python -m venv venv
@@ -24,76 +32,71 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Configure Environment
-Create `.env` file:
+### 3. Environment Setup
 ```env
+# .env file
 DATABASE_URL=postgresql://user:password@localhost:5432/dataviv
+SECRET_KEY=your_secret_key_here
 ```
 
-### 3. Run the Application
+### 4. Run Application
 ```bash
+# Development mode
 uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+
+# Production mode
+uvicorn main:app --host 0.0.0.0 --port 8001
 ```
 
 ## Project Structure
 ```
-app/
-├── models/              # SQLAlchemy models
-│   ├── notification.py
-│   └── user.py
-├── routes/             # API routes
-│   ├── notification.py
-│   └── auth.py
-├── services/          # Business logic
-│   └── notification_service.py
-├── utils/            # Utility functions
-│   └── error_handler.py
-└── database.py       # Database configuration
+dataviv_backend/
+├── app/
+│   ├── models/
+│   │   ├── notification.py    # Notification model
+│   │   └── user.py           # User model
+│   ├── routes/
+│   │   ├── notification.py   # Notification endpoints
+│   │   └── auth.py          # Auth endpoints
+│   ├── services/
+│   │   └── notification_service.py  # Business logic
+│   ├── utils/
+│   │   └── error_handler.py  # Error handling
+│   ├── websocket.py         # WebSocket manager
+│   └── database.py          # DB configuration
+├── main.py                  # Application entry
+├── requirements.txt         # Dependencies
+└── README.md               # Documentation
 ```
 
-## Core Features
+## Features
 
-### 1. Notification System
+### 1. WebSocket Notifications
 ```python
-# Create notification
-POST /notifications
-{
-    "method": "GET",
-    "path": "/example",
-    "status_code": 200
-}
+# Connect to WebSocket
+ws_url = "ws://localhost:8001/ws/notifications"
 
-# Get notifications
-GET /notifications?skip=0&limit=10
-```
-
-### 2. WebSocket Integration
-```python
-import websockets
-import asyncio
-
-async def connect_to_notifications():
-    uri = "ws://localhost:8001/ws/notifications"
-    async with websockets.connect(uri) as websocket:
+# Client example
+async def connect_notifications():
+    async with websockets.connect(ws_url) as websocket:
         while True:
-            notification = await websocket.recv()
-            print(f"Received: {notification}")
-
-# Run WebSocket client
-asyncio.run(connect_to_notifications())
+            msg = await websocket.recv()
+            print(f"Received: {msg}")
+            
+            # Send confirmation
+            await websocket.send(json.dumps({
+                "status": "received",
+                "timestamp": str(datetime.utcnow())
+            }))
 ```
 
-### 3. Error Handling
+### 2. Error Handling
 ```python
-# Using custom exceptions
-try:
-    result = some_operation()
-except Exception as e:
-    raise APIError(
-        status_code=500,
-        detail="Operation failed",
-        error_type="operation_error"
-    )
+# Custom exceptions
+class APIError(HTTPException):
+    def __init__(self, status_code: int, detail: str, error_type: str):
+        super().__init__(status_code=status_code, detail=detail)
+        self.error_type = error_type
 
 # Error response format
 {
@@ -103,161 +106,121 @@ except Exception as e:
 }
 ```
 
-## API Reference
-
-### Notifications API
-
+### 3. Notification System
 ```python
 # Create notification
-@router.post("/notifications/")
-async def create_notification(...)
-
-# Get notification by ID
-@router.get("/notifications/{notification_id}")
-async def read_notification(...)
+POST /notifications
+{
+    "method": "GET",
+    "path": "/example",
+    "status_code": 200
+}
 
 # List notifications
-@router.get("/notifications/")
-async def read_notifications(...)
+GET /notifications?skip=0&limit=10
 
-# Update notification
-@router.put("/notifications/{notification_id}")
-async def update_notification(...)
-
-# Delete notification
-@router.delete("/notifications/{notification_id}")
-async def delete_notification(...)
+# Get specific notification
+GET /notifications/{id}
 ```
 
-### WebSocket API
+## Troubleshooting
+
+### 1. Package Compatibility
+If you encounter bcrypt errors:
+```bash
+# Uninstall existing packages
+pip uninstall bcrypt passlib
+
+# Install specific versions
+pip install bcrypt==4.0.1
+pip install passlib==1.7.4
+```
+
+### 2. WebSocket Connection
+If WebSocket shows empty status:
 ```python
-@app.websocket("/ws/notifications")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    try:
-        while True:
-            data = await websocket.receive_text()
-    except WebSocketDisconnect:
-        # Handle disconnect
+# Check WebSocket connection
+print(f"Active clients: {manager.get_status()}")
+
+# Monitor connection status
+logger.info(f"WebSocket clients: {len(manager.active_connections)}")
 ```
 
-## Error Handling
-
-### Custom Exceptions
+### 3. Database Issues
 ```python
-class APIError(HTTPException):
-    def __init__(self, status_code: int, detail: str, error_type: str):
-        super().__init__(status_code=status_code, detail=detail)
-        self.error_type = error_type
-
-class DatabaseError(Exception):
-    def __init__(self, message: str, original_error: Exception = None):
-        super().__init__(message)
-        self.original_error = original_error
+# Check database connection
+engine = create_engine(DATABASE_URL)
+try:
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT 1"))
+        print("Database connected successfully")
+except Exception as e:
+    print(f"Database connection failed: {e}")
 ```
 
-### Error Logging
+## Development Guide
+
+### 1. Adding New Features
+```python
+# 1. Create model
+class NewFeature(Base):
+    __tablename__ = "new_features"
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+
+# 2. Create schema
+class NewFeatureSchema(BaseModel):
+    name: str
+    
+    class Config:
+        orm_mode = True
+
+# 3. Add route
+@router.post("/new-feature")
+async def create_feature(feature: NewFeatureSchema):
+    # Implementation
+```
+
+### 2. Testing WebSocket
+```python
+# Run test client
+python test_client.py
+
+# Monitor WebSocket connections
+ws_url = "ws://localhost:8001/ws/notifications"
+```
+
+### 3. Logging
 ```python
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger(__name__)
 
-# Log errors
-try:
-    # Your code
-except Exception as e:
-    logger.error(f"Error occurred: {str(e)}", exc_info=True)
+# Usage
+logger.info("Operation successful")
+logger.error("Operation failed", exc_info=True)
 ```
 
-## Database Operations
+## API Documentation
 
-### Models
-```python
-class Notification(Base):
-    __tablename__ = "notifications"
-    id = Column(Integer, primary_key=True)
-    method = Column(String)
-    path = Column(String)
-    timestamp = Column(DateTime, default=datetime.utcnow)
-```
+Access the interactive API documentation at:
+- Swagger UI: `http://localhost:8001/docs`
+- ReDoc: `http://localhost:8001/redoc`
 
-### Queries
-```python
-# Create
-db.add(notification)
-db.commit()
+## Contributing
 
-# Read
-db.query(Notification).filter(Notification.id == notification_id).first()
-
-# Update
-notification.update(data)
-db.commit()
-
-# Delete
-db.delete(notification)
-db.commit()
-```
-
-## Development Guide
-
-### Adding New Features
-1. Create model in `app/models/`
-2. Create schema in `app/schemas/`
-3. Add routes in `app/routes/`
-4. Include error handling
-5. Add logging statements
-
-### Testing
-```bash
-# Run tests
-pytest
-
-# Run specific test
-pytest tests/test_notifications.py -v
-```
-
-### Debugging Tips
-1. Enable debug logging
-2. Use FastAPI debug mode
-3. Check database logs
-4. Monitor WebSocket connections
+1. Fork the repository
+2. Create feature branch
+3. Install dependencies
+4. Make changes
+5. Run tests
+6. Submit PR
 
 ## Common Issues
 
-### Database Connection
-```python
-# Check connection
-from sqlalchemy import create_engine
-engine = create_engine(DATABASE_URL)
-try:
-    connection = engine.connect()
-    # Connection successful
-except Exception as e:
-    print(f"Connection failed: {e}")
-```
-
-### WebSocket Errors
-```python
-# Handle WebSocket disconnects
-try:
-    await websocket.send_text(message)
-except WebSocketDisconnect:
-    websocket_clients.remove(websocket)
-except Exception as e:
-    logger.error(f"WebSocket error: {e}")
-```
-
-### API Errors
-```python
-# Handle API errors
-@app.exception_handler(APIError)
-async def api_error_handler(request, exc):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"error": exc.error_type, "detail": exc.detail}
-    )
-```
+1. **bcrypt Error**: Update to bcrypt==4.0.1
+2. **Empty WebSocket Status**: Check client connections
+3. **Database Connection**: Verify DATABASE_URL
+4. **Package Conflicts**: Use specified versions
